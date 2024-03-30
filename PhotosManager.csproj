@@ -181,7 +181,13 @@
     <Content Include="fonts\glyphicons-halflings-regular.svg" />
     <Content Include="Global.asax" />
     <Content Include="Content\Site.css" />
+    <Content Include="Images_Data\Photos\0faf9dbf-07b3-46f2-a127-fb084ada0fdf.jpeg" />
+    <Content Include="Images_Data\Photos\14f935ec-5775-4081-9f75-5a3567416ddc.jpeg" />
+    <Content Include="Images_Data\Photos\bf44bcd9-670c-4455-87b8-e1d6589e287b.jpeg" />
     <Content Include="Images_Data\Photos\No_Image.png" />
+    <Content Include="Images_Data\Users_Avatars\97b10628-912e-4ef1-8ae5-e372677be389.png" />
+    <Content Include="Images_Data\Users_Avatars\bd8480db-e80f-4b29-ba39-7f18777a89e6.jpeg" />
+    <Content Include="Images_Data\Users_Avatars\f32bdabc-7741-47f8-9252-0c6ec285151c.jpeg" />
     <Content Include="Images_Data\Users_Avatars\no_avatar.png" />
     <Content Include="App_Code\Helper.cshtml" />
     <Content Include="Models\PhotosManagerDBModels.Context.tt">
