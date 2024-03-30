@@ -12,7 +12,7 @@ namespace PhotosManager.Controllers
     public class PhotosController : Controller
     {
         const string IllegalAccessUrl = "/Accounts/Login?message=Tentative d'accès illégale!";
-        private PhotosManagerDBEntities DB = new PhotosManagerDBEntities();
+        private readonly PhotosManagerDBEntities DB = new PhotosManagerDBEntities();
 
         public ActionResult SetPhotoOwnerSearchId(int id)
         {
@@ -78,7 +78,7 @@ namespace PhotosManager.Controllers
         }
         public ActionResult Create()
         {
-            return View(DB.NewPhoto());
+            return View(new Photo());
         }
         [HttpPost]
         [ValidateAntiForgeryToken]

@@ -14,17 +14,22 @@ namespace PhotosManager.Models
     
     public partial class User
     {
+        const string AvatarsFolder = @"/Images_Data/Users_Avatars/";
+        const string DefaultAvatar = @"no_avatar.png";
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public User()
         {
             this.Likes = new HashSet<Like>();
             this.Photos = new HashSet<Photo>();
+            Avatar = AvatarsFolder + DefaultAvatar;
         }
     
         public int Id { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }
         public string Password { get; set; }
+        [Asset(AvatarsFolder, DefaultAvatar)]
         public string Avatar { get; set; }
         public bool IsAdmin { get; set; }
         public bool Blocked { get; set; }

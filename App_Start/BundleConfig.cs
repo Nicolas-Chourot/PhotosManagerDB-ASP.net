@@ -21,8 +21,8 @@ namespace PhotosManager
             bundles.Add(new ScriptBundle("~/bundles/js").Include(
                        "~/Scripts/session.js",
                        "~/Scripts/validation.js",
-                       "~/Scripts/imageControl.js",
-                        "~/Scripts/bootbox.js",
+                       "~/Scripts/imageControl-2.0.js",
+                       "~/Scripts/bootbox.js",
                        "~/Scripts/jquery.maskedinput.js"));
 
         }

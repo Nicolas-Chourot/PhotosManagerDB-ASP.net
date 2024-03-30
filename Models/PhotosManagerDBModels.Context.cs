@@ -12,7 +12,8 @@ namespace PhotosManager.Models
     using System;
     using System.Data.Entity;
     using System.Data.Entity.Infrastructure;
-    
+    using System.Linq;
+
     public partial class PhotosManagerDBEntities : DbContext
     {
         public PhotosManagerDBEntities()
@@ -28,5 +29,7 @@ namespace PhotosManager.Models
         public virtual DbSet<Like> Likes { get; set; }
         public virtual DbSet<Photo> Photos { get; set; }
         public virtual DbSet<User> Users { get; set; }
+
+       
     }
 }

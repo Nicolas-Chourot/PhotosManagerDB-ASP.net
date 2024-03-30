@@ -65,7 +65,7 @@ namespace PhotosManager.Controllers
         {
             Session["connectedUser"] = null;
             Session["currentLoginEmail"] = "";
-            return View(DB.NewUser());
+            return View(new User());
         }
         [HttpPost]
         [ValidateAntiForgeryToken()]
@@ -102,7 +102,7 @@ namespace PhotosManager.Controllers
         {
             User connectedUser = (User)Session["ConnectedUser"];
             DB.DeleteUser(connectedUser.Id);
-            return RedirectToAction("Login?message=Votre compte a été effacé avec succès!");
+            return Redirect("Login?message=Votre compte a été effacé avec succès!");
         }
         [AdminAccess]
         public ActionResult ManageUsers()

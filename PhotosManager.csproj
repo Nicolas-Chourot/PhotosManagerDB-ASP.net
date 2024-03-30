@@ -195,7 +195,7 @@
       <LastGenOutput>PhotosManagerDBModels.cs</LastGenOutput>
     </Content>
     <Content Include="Scripts\bootbox.js" />
-    <Content Include="Scripts\imageControl.js" />
+    <Content Include="Scripts\imageControl-2.0.js" />
     <Content Include="fonts\FontAwesome.otf" />
     <Content Include="fonts\fontawesome-webfont.woff2" />
     <Content Include="fonts\fontawesome-webfont.woff" />

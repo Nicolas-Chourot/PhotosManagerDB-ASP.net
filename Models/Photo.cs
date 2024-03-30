@@ -14,16 +14,22 @@ namespace PhotosManager.Models
     
     public partial class Photo
     {
+        const string PhotosFolder = @"/Images_Data/Photos/";
+        const string DefaultPhoto = @"No_Image.png";
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
         public Photo()
         {
             this.Likes = new HashSet<Like>();
+            Image = PhotosFolder + DefaultPhoto;
+            CreationDate = DateTime.Now;
         }
     
         public int Id { get; set; }
         public int OwnerId { get; set; }
         public string Title { get; set; }
         public string Description { get; set; }
+        [Asset(PhotosFolder, DefaultPhoto)]
         public string Image { get; set; }
         public System.DateTime CreationDate { get; set; }
         public bool Shared { get; set; }

@@ -3,9 +3,11 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Data.Entity;
+using System.Data.Entity.Infrastructure;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Web;
@@ -26,7 +28,7 @@ namespace PhotosManager.Models
         const string PhotosFolder = @"/Images_Data/Photos/";
         const string DefaultPhoto = @"No_Image.png";
         #endregion
-        #region Encryption
+        #region Password Encryption
         private static string CreateSalt(int size)
         {
             RNGCryptoServiceProvider randomNumberGenerator = new RNGCryptoServiceProvider();
@@ -66,7 +68,7 @@ namespace PhotosManager.Models
         public static void Update(this User user, User copy)
         {
             user.Id = copy.Id;
-            user.Avatar = HandleAsset(copy.Avatar, user.Avatar, AvatarsFolder);
+            user.Avatar = copy.Avatar;
             user.Email = copy.Email;
             user.Password = !string.IsNullOrEmpty(copy.Password) ? copy.Password : HashPassword(user.Password);
             user.Blocked = copy.Blocked;
@@ -85,15 +87,18 @@ namespace PhotosManager.Models
                 return foundUser.Id != connectedUser.Id;
             return false;
         }
-        public static User NewUser(this PhotosManagerDBEntities DB)
+        
+        public static bool ChangeUserPassword(this PhotosManagerDBEntities DB, string email, string newPassword)
         {
-            return new User
-            {
-                Avatar = AvatarsFolder + DefaultAvatar
-            };
+            User user = DB.Users.Where(u => u.Email == email).FirstOrDefault();
+            user.Password = HashPassword(newPassword);
+            DB.Entry(user).State = EntityState.Modified;
+            DB.SaveChanges();
+            return true;
         }
         public static User LogUser(this PhotosManagerDBEntities DB, LoginCredential credential)
         {
+            // ChangeUserPassword(DB, "Nicolas.Chourot@clg.qc.ca", "password");
             User user = DB.Users.Where(u => u.Email == credential.Email).FirstOrDefault();
             if (user != null)
             {
@@ -110,7 +115,6 @@ namespace PhotosManager.Models
             if (user != null)
             {
                 user.Password = HashPassword(user.Password);
-                user.Avatar = HandleAsset(user.Avatar, "", AvatarsFolder);
                 user = DB.Users.Add(user);
                 DB.SaveChanges();
                 return user;
@@ -137,7 +141,6 @@ namespace PhotosManager.Models
             {
                 BeginTransaction(DB);
                 DB.Likes.RemoveRange(DB.Likes.Where(l => l.UserId == id));
-                DeleteAssets(user.Avatar);
                 DB.Users.Remove(user);
                 DB.SaveChanges();
                 Commit();
@@ -179,19 +182,11 @@ namespace PhotosManager.Models
             photo.Shared = copy.Shared;
             photo.CreationDate = DateTime.Now;
         }
-        public static Photo NewPhoto(this PhotosManagerDBEntities DB)
-        {
-            return new Photo
-            {
-                Image = PhotosFolder + DefaultPhoto,
-            };
-        }
+        
         public static Photo AddPhoto(this PhotosManagerDBEntities DB, Photo photo)
         {
             if (photo != null)
             {
-                photo.CreationDate = DateTime.Now;
-                photo.Image = HandleAsset(photo.Image, "", PhotosFolder);
                 photo = DB.Photos.Add(photo);
                 DB.SaveChanges();
                 return photo;
@@ -202,9 +197,7 @@ namespace PhotosManager.Models
         {
             if (photo != null)
             {
-                Photo storedPhoto = DB.Photos.Find(photo.Id);
-                storedPhoto.Update(photo);
-                DB.Entry(storedPhoto).State = EntityState.Modified;
+                DB.Entry(photo).State = EntityState.Modified;
                 DB.SaveChanges();
                 photo = DB.Photos.Find(photo.Id);
                 return photo;
@@ -218,7 +211,6 @@ namespace PhotosManager.Models
             {
                 BeginTransaction(DB);
                 DB.Likes.RemoveRange(DB.Likes.Where(l => l.PhotoId == id));
-                DeleteAssets(photo.Image);
                 DB.Photos.Remove(photo);
                 DB.SaveChanges();
                 Commit();
@@ -326,4 +318,119 @@ namespace PhotosManager.Models
         }
         #endregion
     }
+
+    public partial class PhotosManagerDBEntities
+    {
+        public override int SaveChanges()
+        {
+            var AssetManager = new ImageAssetManager<Object>();
+            var added = this.ChangeTracker.Entries()
+            .Where(t => t.State == EntityState.Added)
+            .Select(t => t.Entity)
+            .ToArray();
+            var modified = this.ChangeTracker.Entries()
+            .Where(t => t.State == EntityState.Modified)
+            .Select(t => t.Entity)
+            .ToArray();
+            var deleted = this.ChangeTracker.Entries()
+            .Where(t => t.State == EntityState.Deleted)
+            .Select(t => t.Entity)
+            .ToArray();
+
+            foreach (var entity in added)
+            {
+                AssetManager.HandleAssetMembers(entity);
+            }
+            foreach (var entity in modified)
+            {
+                AssetManager.HandleAssetMembers(entity);
+            }
+            foreach (var entity in deleted)
+            {
+                AssetManager.DeleteAssets(entity);
+            }
+            return base.SaveChanges();
+        }
+    }
+
+    public class ImageAssetManager<T>
+    {
+        private object GetAttributeValue(T data, string attributeName)
+        {
+            return data.GetType().GetProperty(attributeName).GetValue(data, null);
+        }
+        // affecter la valeur de l'attribut attributeName de l'intance data de classe T
+        private void SetAttributeValue(T data, string attributeName, object value)
+        {
+            data.GetType().GetProperty(attributeName).SetValue(data, value, null);
+        }
+        private bool IsBase64Value(string value)
+        {
+            bool isBase64 = value.Contains("data:") && value.Contains(";base64,");
+            return isBase64;
+        }
+        public void DeleteAssets(T data)
+        {
+            var type = data.GetType();
+
+            foreach (var property in type.GetProperties())
+            {
+                var attribute = property.GetCustomAttribute(typeof(AssetAttribute));
+
+                if (attribute != null)
+                {
+                    string assetsFolder = ((AssetAttribute)attribute).Folder();
+                    string defaultValue = ((AssetAttribute)attribute).DefaultValue();
+                    string propName = property.Name;
+                    string value = GetAttributeValue(data, propName).ToString();
+                    if (value != null && value != assetsFolder + defaultValue)
+                        File.Delete(HostingEnvironment.MapPath(value).ToString());
+                }
+            }
+        }
+        public void HandleAssetMembers(T data)
+        {
+            var type = data.GetType();
+            foreach (var property in type.GetProperties())
+            {
+                var attribute = property.GetCustomAttribute(typeof(AssetAttribute));
+                if (attribute != null)
+                {
+                    string propName = property.Name;
+                    string propValue = GetAttributeValue(data, propName).ToString() ?? "";
+                    if (IsBase64Value(propValue)) // new image
+                    {
+                        string assetsFolder = ((AssetAttribute)attribute).Folder();
+                        string defaultValue = ((AssetAttribute)attribute).DefaultValue();
+                        string previousAssetURL = propValue.Split('|')[0];
+                        string imagePart = propValue.Split('|')[1];
+                        if (previousAssetURL != "" && previousAssetURL != assetsFolder + defaultValue)
+                            File.Delete(HostingEnvironment.MapPath(previousAssetURL));
+                        string[] base64Data = imagePart.Split(',');
+                        string extension = base64Data[0].Replace(";base64", "").Split('/')[1];
+                        // IIS mime patch : does not serve webp and avif mimes
+                        if (extension.ToLower() == "webp") extension = "png";
+                        if (extension.ToLower() == "avif") extension = "png";
+                        string assetData = base64Data[1];
+                        string assetUrl;
+                        string newAssetServerPath;
+                        do
+                        {
+                            var key = Guid.NewGuid().ToString();
+                            assetUrl = assetsFolder + key + "." + extension;
+                            newAssetServerPath = HostingEnvironment.MapPath(assetUrl);
+                            // make sure new file does not already exists 
+                        } while (File.Exists(newAssetServerPath));
+                        SetAttributeValue(data, propName, assetUrl);
+                        using (var stream = new MemoryStream(Convert.FromBase64String(assetData)))
+                        {
+                            using (var file = new FileStream(newAssetServerPath, FileMode.Create, FileAccess.Write))
+                                stream.WriteTo(file);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
+
